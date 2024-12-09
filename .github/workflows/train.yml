@@ -25,3 +25,9 @@ jobs:
 
     - name: Run training script
       run: python train.py
+
+- name: Archive model
+  uses: actions/upload-artifact@v3
+  with:
+    name: trained-model
+    path: model.h5

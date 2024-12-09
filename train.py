@@ -3,8 +3,7 @@ import tensorflow as tf
 import numpy as np
 import os
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.preprocessing.image import load_img
 
 # Charger les annotations
 with open('data/flowIA-annotations.json', 'r') as f:
@@ -18,17 +17,28 @@ labels = []
 for annotation in annotations["annotations"]:
     file_path = os.path.join("data/images", annotation["fileName"])
     if os.path.exists(file_path):
-        images.append(tf.keras.utils.load_img(file_path, target_size=(128, 128)))
-        labels.append(labels_map[annotation["annotation"]["label"]])
+        try:
+            img = load_img(file_path, target_size=(128, 128))
+            images.append(tf.keras.preprocessing.image.img_to_array(img) / 255.0)
+            labels.append(labels_map[annotation["annotation"]["label"]])
+        except Exception as e:
+            print(f"Erreur lors du chargement de l'image {file_path}: {e}")
+    else:
+        print(f"Image introuvable : {file_path}")
 
-# Prétraitement
-images = np.array([tf.keras.preprocessing.image.img_to_array(img) / 255.0 for img in images])
+# Vérification des données
+if len(images) == 0:
+    raise ValueError("Aucune image valide trouvée. Vérifiez vos annotations et vos chemins d'accès.")
+
+# Convertir en tableaux numpy
+images = np.array(images)
 labels = np.array(labels)
 
+# Séparation des ensembles de données
 X_train, X_test, y_train, y_test = train_test_split(images, labels, test_size=0.2, random_state=42)
 
 # Modèle léger
-base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(128, 128, 3))
+base_model = tf.keras.applications.MobileNetV2(weights="imagenet", include_top=False, input_shape=(128, 128, 3))
 base_model.trainable = False
 
 model = tf.keras.Sequential([
